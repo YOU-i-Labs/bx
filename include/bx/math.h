@@ -53,14 +53,23 @@ namespace bx
 	///
 	struct Vec3
 	{
+		///
+		Vec3();
+
+		///
+		constexpr Vec3(float _v);
+
+		///
+		constexpr Vec3(float _x, float _y, float _z);
+
 		float x, y, z;
 	};
 
 	///
 	struct Plane
 	{
-		bx::Vec3 normal;
-		float    dist;
+		Vec3  normal;
+		float dist;
 	};
 
 	///
@@ -325,6 +334,12 @@ namespace bx
 	BX_CONST_FUNC float length(const Vec3 _a);
 
 	///
+	BX_CONST_FUNC float distanceSq(const Vec3 _a, const Vec3 _b);
+
+	///
+	BX_CONST_FUNC float distance(const Vec3 _a, const Vec3 _b);
+
+	///
 	BX_CONSTEXPR_FUNC Vec3 lerp(const Vec3 _a, const Vec3 _b, float _t);
 
 	///
@@ -573,13 +588,16 @@ namespace bx
 	void mtxInverse(float* _result, const float* _a);
 
 	///
-	bx::Vec3 calcNormal(const bx::Vec3& _va, const bx::Vec3& _vb, const bx::Vec3& _vc);
+	Vec3 calcNormal(const Vec3& _va, const Vec3& _vb, const Vec3& _vc);
 
 	///
-	void calcPlane(Plane& _outPlane, const bx::Vec3& _va, const bx::Vec3& _vb, const bx::Vec3& _vc);
+	void calcPlane(Plane& _outPlane, const Vec3& _va, const Vec3& _vb, const Vec3& _vc);
 
 	///
-	void calcPlane(Plane& _outPlane, const bx::Vec3& _normal, const bx::Vec3& _pos);
+	void calcPlane(Plane& _outPlane, const Vec3& _normal, const Vec3& _pos);
+
+	///
+	float distance(const Plane& _plane, const Vec3& _pos);
 
 	///
 	void calcLinearFit2D(float _result[2], const void* _points, uint32_t _stride, uint32_t _numPoints);

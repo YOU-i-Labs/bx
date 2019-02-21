@@ -277,7 +277,8 @@ namespace bx
 	inline BX_CONSTEXPR_FUNC bool equal(float _a, float _b, float _epsilon)
 	{
 		// Reference(s):
-		// - https://web.archive.org/web/20181103180318/http://realtimecollisiondetection.net/blog/?p=89
+		// - Floating-point tolerances revisited
+		//   https://web.archive.org/web/20181103180318/http://realtimecollisiondetection.net/blog/?p=89
 		//
 		const float lhs = abs(_a - _b);
 		const float rhs = _epsilon * max(1.0f, abs(_a), abs(_b) );
@@ -359,6 +360,24 @@ namespace bx
 	inline void store(void* _ptr, const Ty& _a)
 	{
 		memCopy(_ptr, &_a, sizeof(Ty) );
+	}
+
+	inline Vec3::Vec3()
+	{
+	}
+
+	constexpr Vec3::Vec3(float _v)
+		: x(_v)
+		, y(_v)
+		, z(_v)
+	{
+	}
+
+	constexpr Vec3::Vec3(float _x, float _y, float _z)
+		: x(_x)
+		, y(_y)
+		, z(_z)
+	{
 	}
 
 	inline BX_CONSTEXPR_FUNC Vec3 round(const Vec3 _a)
@@ -481,6 +500,17 @@ namespace bx
 		return sqrt(dot(_a, _a) );
 	}
 
+	inline BX_CONST_FUNC float distanceSq(const Vec3 _a, const Vec3 _b)
+	{
+		const Vec3 ba = sub(_b, _a);
+		return dot(ba, ba);
+	}
+
+	inline BX_CONST_FUNC float distance(const Vec3 _a, const Vec3 _b)
+	{
+		return length(sub(_b, _a) );
+	}
+
 	inline BX_CONSTEXPR_FUNC Vec3 lerp(const Vec3 _a, const Vec3 _b, float _t)
 	{
 		return
@@ -598,8 +628,8 @@ namespace bx
 		const float phi   = atan2(_dir.x, _dir.z);
 		const float theta = acos(_dir.y);
 
-		*_outU = (bx::kPi + phi)/bx::kPi2;
-		*_outV = theta*bx::kInvPi;
+		*_outU = (kPi + phi)/kPi2;
+		*_outV = theta*kInvPi;
 	}
 
 	inline BX_CONSTEXPR_FUNC Quaternion invert(const Quaternion _a)
@@ -654,18 +684,10 @@ namespace bx
 		};
 	}
 
-	namespace detail
-	{
-		inline BX_CONSTEXPR_FUNC Quaternion loadQ(const Vec3 _v)
-		{
-			return { _v.x, _v.y, _v.z, 0.0f };
-		}
-	}
-
 	inline BX_CONSTEXPR_FUNC Vec3 mul(const Vec3 _v, const Quaternion _q)
 	{
 		const Quaternion tmp0 = invert(_q);
-		const Quaternion qv   = detail::loadQ(_v);
+		const Quaternion qv   = { _v.x, _v.y, _v.z, 0.0f };
 		const Quaternion tmp1 = mul(tmp0, qv);
 		const Vec3 result     = mulXyz(tmp1, _q);
 
@@ -975,25 +997,30 @@ namespace bx
 		_result[15] = _a[15];
 	}
 
-	inline bx::Vec3 calcNormal(const bx::Vec3& _va, const bx::Vec3& _vb, const bx::Vec3& _vc)
+	inline Vec3 calcNormal(const Vec3& _va, const Vec3& _vb, const Vec3& _vc)
 	{
-		const bx::Vec3 ba    = sub(_vb, _va);
-		const bx::Vec3 ca    = sub(_vc, _va);
-		const bx::Vec3 baxca = cross(ba, ca);
+		const Vec3 ba    = sub(_vb, _va);
+		const Vec3 ca    = sub(_vc, _va);
+		const Vec3 baxca = cross(ba, ca);
 
-		return bx::normalize(baxca);
+		return normalize(baxca);
 	}
 
-	inline void calcPlane(Plane& _outPlane, const bx::Vec3& _va, const bx::Vec3& _vb, const bx::Vec3& _vc)
+	inline void calcPlane(Plane& _outPlane, const Vec3& _va, const Vec3& _vb, const Vec3& _vc)
 	{
-		bx::Vec3 normal = calcNormal(_va, _vb, _vc);
+		Vec3 normal = calcNormal(_va, _vb, _vc);
 		calcPlane(_outPlane, normal, _va);
 	}
 
-	inline void calcPlane(Plane& _outPlane, const bx::Vec3& _normal, const bx::Vec3& _pos)
+	inline void calcPlane(Plane& _outPlane, const Vec3& _normal, const Vec3& _pos)
 	{
 		_outPlane.normal = _normal;
 		_outPlane.dist   = -dot(_normal, _pos);
+	}
+
+	inline float distance(const Plane& _plane, const Vec3& _pos)
+	{
+		return dot(_plane.normal, _pos) + _plane.dist;
 	}
 
 	inline BX_CONST_FUNC float toLinear(float _a)
