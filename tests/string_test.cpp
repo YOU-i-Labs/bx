@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 Branimir Karadzic. All rights reserved.
+ * Copyright 2010-2020 Branimir Karadzic. All rights reserved.
  * License: https://github.com/bkaradzic/bx#license-bsd-2-clause
  */
 
@@ -188,6 +188,7 @@ TEST_CASE("strRFind", "")
 	REQUIRE(bx::strRFind(bx::StringView(test, 0), 's').isEmpty() );
 	REQUIRE(bx::strRFind(bx::StringView(test, 1), 's').isEmpty() );
 	REQUIRE(&test[2] == bx::strRFind(test, 's').getPtr() );
+	REQUIRE(&test[3] == bx::strRFind(test, 't').getPtr() );
 }
 
 TEST_CASE("strFindI", "")
@@ -224,6 +225,18 @@ TEST_CASE("strFind", "")
 		REQUIRE(&test[4] == bx::strFind(test, "Quick").getPtr() );
 
 		REQUIRE(bx::strFind("vgd", 'a').isEmpty() );
+	}
+
+	{
+		bx::StringView test = bx::strFind("a", "a");
+		REQUIRE(test.getLength() == 1);
+		REQUIRE(*test.getPtr() == 'a');
+	}
+
+	{
+		bx::StringView test = bx::strFind("a", bx::StringView("a ", 1) );
+		REQUIRE(test.getLength() == 1);
+		REQUIRE(*test.getPtr() == 'a');
 	}
 }
 

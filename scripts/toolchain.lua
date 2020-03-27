@@ -1,5 +1,5 @@
 --
--- Copyright 2010-2019 Branimir Karadzic. All rights reserved.
+-- Copyright 2010-2020 Branimir Karadzic. All rights reserved.
 -- License: https://github.com/bkaradzic/bx#license-bsd-2-clause
 --
 
@@ -253,14 +253,15 @@ function toolchain(_buildDir, _libDir)
 
 		elseif "asmjs" == _OPTIONS["gcc"] then
 
-			if not os.getenv("EMSDK") then
-				print("Set EMSDK environment variable.")
+			if not os.getenv("EMSCRIPTEN") then
+				print("Set EMSCRIPTEN environment variable.")
 			end
 
-			premake.gcc.cc   = "\"$(EMSDK)/fastcomp/bin/emcc\""
-			premake.gcc.cxx  = "\"$(EMSDK)/fastcomp/bin/em++\""
-			premake.gcc.ar   = "\"$(EMSDK)/fastcomp/bin/emar\""
+			premake.gcc.cc   = "\"$(EMSCRIPTEN)/emcc\""
+			premake.gcc.cxx  = "\"$(EMSCRIPTEN)/em++\""
+			premake.gcc.ar   = "\"$(EMSCRIPTEN)/emar\""
 			premake.gcc.llvm = true
+			premake.gcc.namestyle = "Emscripten"
 			location (path.join(_buildDir, "projects", _ACTION .. "-asmjs"))
 
 		elseif "freebsd" == _OPTIONS["gcc"] then
@@ -329,16 +330,6 @@ function toolchain(_buildDir, _libDir)
 
 		elseif "linux-arm-gcc" == _OPTIONS["gcc"] then
 			location (path.join(_buildDir, "projects", _ACTION .. "-linux-arm-gcc"))
-
-		elseif "linux-steamlink" == _OPTIONS["gcc"] then
-			if not os.getenv("MARVELL_SDK_PATH") then
-				print("Set MARVELL_SDK_PATH environment variable.")
-			end
-
-			premake.gcc.cc  = "$(MARVELL_SDK_PATH)/toolchain/bin/armv7a-cros-linux-gnueabi-gcc"
-			premake.gcc.cxx = "$(MARVELL_SDK_PATH)/toolchain/bin/armv7a-cros-linux-gnueabi-g++"
-			premake.gcc.ar  = "$(MARVELL_SDK_PATH)/toolchain/bin/armv7a-cros-linux-gnueabi-ar"
-			location (path.join(_buildDir, "projects", _ACTION .. "-linux-steamlink"))
 
 		elseif "mingw-gcc" == _OPTIONS["gcc"] then
 			if not os.getenv("MINGW") then
@@ -556,8 +547,6 @@ function toolchain(_buildDir, _libDir)
 			"WIN32",
 			"_WIN32",
 			"_HAS_EXCEPTIONS=0",
-			"_HAS_ITERATOR_DEBUGGING=0",
-			"_ITERATOR_DEBUG_LEVEL=0",
 			"_SCL_SECURE=0",
 			"_SECURE_SCL=0",
 			"_SCL_SECURE_NO_WARNINGS",
@@ -857,29 +846,6 @@ function toolchain(_buildDir, _libDir)
 			"-Wl,-z,now",
 		}
 
-	configuration { "linux-steamlink" }
-		targetdir (path.join(_buildDir, "steamlink/bin"))
-		objdir (path.join(_buildDir, "steamlink/obj"))
-		libdirs { path.join(_libDir, "lib/steamlink") }
-		includedirs { path.join(bxDir, "include/compat/linux") }
-		defines {
-			"__STEAMLINK__=1", -- There is no special prefedined compiler symbol to detect SteamLink, faking it.
-		}
-		buildoptions {
-			"-Wfatal-errors",
-			"-Wunused-value",
-			"-Wundef",
-			"-pthread",
-			"-marm",
-			"-mfloat-abi=hard",
-			"--sysroot=$(MARVELL_SDK_PATH)/rootfs",
-		}
-		linkoptions {
-			"-static-libgcc",
-			"-static-libstdc++",
-			"--sysroot=$(MARVELL_SDK_PATH)/rootfs",
-		}
-
 	configuration { "android-arm" }
 		targetdir (path.join(_buildDir, "android-arm/bin"))
 		objdir (path.join(_buildDir, "android-arm/obj"))
@@ -971,9 +937,15 @@ function toolchain(_buildDir, _libDir)
 		objdir (path.join(_buildDir, "asmjs/obj"))
 		libdirs { path.join(_libDir, "lib/asmjs") }
 		buildoptions {
-			"-isystem \"$(EMSDK)/fastcomp/emscripten\"",
 			"-Wunused-value",
 			"-Wundef",
+		}
+
+		linkoptions {
+--			"-s ASSERTIONS=2",
+--			"-s EMTERPRETIFY=1",
+--			"-s EMTERPRETIFY_ASYNC=1",
+			"-s PRECISE_F32=1",
 		}
 
 	configuration { "freebsd" }
@@ -1037,6 +1009,7 @@ function toolchain(_buildDir, _libDir)
 			"-msse2",
 			"-Wunused-value",
 			"-Wundef",
+			"-target x86_64-apple-macos" .. (#macosPlatform > 0 and macosPlatform or "10.11"),
 		}
 		includedirs { path.join(bxDir, "include/compat/osx") }
 
@@ -1258,13 +1231,7 @@ function strip()
 			"$(SILENT) $(ANDROID_NDK_X86)/bin/i686-linux-android-strip -s \"$(TARGET)\""
 		}
 
-	configuration { "linux-steamlink", "Release" }
-		postbuildcommands {
-			"$(SILENT) echo Stripping symbols.",
-			"$(SILENT) $(MARVELL_SDK_PATH)/toolchain/bin/armv7a-cros-linux-gnueabi-strip -s \"$(TARGET)\""
-		}
-
-	configuration { "linux-* or rpi", "not linux-steamlink", "Release" }
+	configuration { "linux-* or rpi", "Release" }
 		postbuildcommands {
 			"$(SILENT) echo Stripping symbols.",
 			"$(SILENT) strip -s \"$(TARGET)\""
@@ -1274,24 +1241,6 @@ function strip()
 		postbuildcommands {
 			"$(SILENT) echo Stripping symbols.",
 			"$(SILENT) $(MINGW)/bin/strip -s \"$(TARGET)\""
-		}
-
-	configuration { "asmjs" }
-		postbuildcommands {
-			"$(SILENT) echo Running asmjs finalize.",
-			"$(SILENT) \"$(EMSDK)/fastcomp/bin/emcc\" -O2 "
-
---				.. "-s ALLOW_MEMORY_GROWTH=1 "
---				.. "-s ASSERTIONS=2 "
---				.. "-s EMTERPRETIFY=1 "
---				.. "-s EMTERPRETIFY_ASYNC=1 "
-				.. "-s PRECISE_F32=1 "
-				.. "-s TOTAL_MEMORY=268435456 "
---				.. "-s USE_WEBGL2=1 "
-
-				.. "--memory-init-file 1 "
-				.. "\"$(TARGET)\" -o \"$(TARGET)\".html "
---				.. "--preload-file ../../../examples/runtime@/ "
 		}
 
 	configuration { "riscv" }
